@@ -9,8 +9,14 @@ const output = path.join(__dirname, 'dist');
 const node_env = process.env.NODE_ENV || 'development';
 const isDev = node_env === 'development';
 
-const babelLoader = 'babel-loader?presets[]=es2015,presets[]=react,plugins[]=transform-react-require,plugins[]=transform-object-assign';
-const styleLoader = 'css-loader?sourceMap!postcss-loader!less-loader?sourceMap';
+const babelLoader = 'babel-loader?presets[]=env,presets[]=react,plugins[]=transform-react-require,plugins[]=transform-object-assign';
+//const styleLoader = 'css-loader?sourceMap!postcss-loader!less-loader?sourceMap';
+const extractless = new ExtractTextPlugin(
+    {
+        filename : "[name].[contenthash].css",
+        disable : process.env.NODE_ENV==="development"
+    }
+)
 
 const config = {
     entry: './app/app.js',
@@ -24,15 +30,19 @@ const config = {
     module: {
         loaders: [
             { test: /\.js$/, exclude: exclude, loader: babelLoader},
-            { test: /\.less$/, exclude: exclude, loader: ExtractTextPlugin.extract('style-loader', styleLoader)},
-            { test: /\.(svg|jpg|jpeg|png|pdf|xml|ico|json|txt)$/, exclude: exclude, loader: 'file'},
-            { test: /\.(eot|ttf|woff|woff2)$/, exclude: exclude, loader: 'file'}
+            { test: /\.less$/, use : extractless.extract([
+                {loader:'less-loader'},
+                {loader:'style-loader'},
+                {loader:'css-loader'}
+            ])},
+            { test: /\.(svg|jpg|jpeg|png|pdf|xml|ico|json|txt)$/, exclude: exclude, loader: 'file-loader'},
+            { test: /\.(eot|ttf|woff|woff2)$/, exclude: exclude, loader: 'file-loader'}
         ]
     },
 
     plugins: [
         new webpack.DefinePlugin({'process.env.NODE_ENV': `"${node_env}"`}),
-        new ExtractTextPlugin('app.css'),
+        extractless,
         new HtmlWebpackPlugin({
             template: './app/index.html'
         }),
@@ -45,16 +55,17 @@ const config = {
     devServer: {
         historyApiFallback: true,
         progress: true,
-        port: 8080
+        port: 8082
     },
 
+    /*
     postcss: function() {
         return [autoprefixer({browsers: ['last 2 versions']})];
-    }
+    }*/
 };
 
 if (isDev) {
-    config.devTool = 'eval';
+    config.devtool = 'eval';
 } else {
     config.plugins.push(new webpack.optimize.UglifyJsPlugin());
 }
